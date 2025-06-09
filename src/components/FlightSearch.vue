@@ -1,37 +1,42 @@
 <template>
   <div class="min-h-screen bg-gradient-to-r from-blue-50 to-white p-4">
     <div class="max-w-3xl mx-auto bg-white rounded-lg shadow-lg p-6">
-      <h1 class="text-2xl font-extrabold text-center text-blue-700 mb-6">
-        ✈️ Flight Search
-      </h1>
+      <h1 class="text-2xl font-extrabold text-center text-blue-700 mb-6">✈️ Flight Search</h1>
 
-      <div class="grid md:grid-cols-2 gap-6 mb-4">
+      <div class="grid grid-cols-[1fr_auto_1fr] gap-6 items-end mb-6">
+        <!-- From Dropdown -->
         <div>
-          <label class="block mb-1 font-medium text-gray-700">Source</label>
+          <label class="block mb-2 text-sm font-semibold text-gray-800">From</label>
           <select
             v-model="selectedSource"
             @change="validateSelection"
-            class="w-full text-sm p-2 sm:p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+            class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 bg-white"
           >
             <option disabled value="">Select Source</option>
-            <option
-              v-for="loc in locations"
-              :key="`source-${loc}`"
-              :value="loc"
-            >
+            <option v-for="loc in locations" :key="`source-${loc}`" :value="loc">
               {{ loc }}
             </option>
           </select>
         </div>
 
-        <div>
-          <label class="block mb-1 font-medium text-gray-700"
-            >Destination</label
+        <!-- Swap Button -->
+        <div class="flex justify-center">
+          <button
+            @click="interchange"
+            class="w-10 h-10 flex items-center justify-center rounded-full bg-blue-400 text-white text-xl shadow-md hover:bg-blue-600 transition"
+            title="Swap Source & Destination"
           >
+            🔁
+          </button>
+        </div>
+
+        <!-- To Dropdown -->
+        <div>
+          <label class="block mb-2 text-sm font-semibold text-gray-800">To</label>
           <select
             v-model="selectedDestination"
             @change="validateSelection"
-            class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400"
+            class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 bg-white"
           >
             <option disabled value="">Select Destination</option>
             <option
@@ -50,7 +55,7 @@
         {{ error }}
       </div>
 
-      <div class="mt-4 text-center" v-if="filteredFlights.length > 0">
+      <div class="mt-4 text-end" v-if="filteredFlights.length > 0">
         <label class="inline-flex items-center space-x-2">
           <input
             type="checkbox"
@@ -64,11 +69,7 @@
 
       <div class="mt-6">
         <div
-          v-if="
-            filteredFlights.length === 0 &&
-            selectedSource &&
-            selectedDestination
-          "
+          v-if="filteredFlights.length === 0 && selectedSource && selectedDestination"
           class="text-center text-gray-500 text-lg"
         >
           🚫 No flights available for this route.
@@ -76,9 +77,7 @@
 
         <div v-else>
           <p class="text-sm text-gray-600 mb-2">
-            Showing {{ filteredFlights.length }} result{{
-              filteredFlights.length > 1 ? "s" : ""
-            }}
+            Showing {{ filteredFlights.length }} result{{ filteredFlights.length > 1 ? 's' : '' }}
           </p>
           <div class="grid gap-4">
             <div
@@ -89,21 +88,13 @@
               <h2 class="text-lg font-bold text-blue-600 mb-2">
                 {{ flight.company }}
               </h2>
-              <div
-                v-for="(segment, index) in flight.segment"
-                :key="index"
-                class="text-sm mb-1"
-              >
+              <div v-for="(segment, index) in flight.segment" :key="index" class="text-sm mb-1">
                 <p>
                   <strong>{{ segment.origin }}</strong> →
                   <strong>{{ segment.destination }}</strong>
                 </p>
-                <p class="text-gray-600">
-                  Departure: {{ formatDate(segment.departureTime) }}
-                </p>
-                <p class="text-gray-600">
-                  Arrival: {{ formatDate(segment.arrivalTime) }}
-                </p>
+                <p class="text-gray-600">Departure: {{ formatDate(segment.departureTime) }}</p>
+                <p class="text-gray-600">Arrival: {{ formatDate(segment.arrivalTime) }}</p>
               </div>
               <p class="mt-2 text-sm font-semibold text-gray-800">
                 Total Duration: {{ flight.duration }} mins
@@ -122,42 +113,41 @@ export default {
     return {
       flights: [],
       locations: [],
-      selectedSource: "",
-      selectedDestination: "",
-      error: "",
+      selectedSource: '',
+      selectedDestination: '',
+      error: '',
       sortByDuration: false,
-    };
+    }
   },
   computed: {
     filteredFlights() {
       let filtered = this.flights.filter(
         (flight) =>
           flight.segment[0].origin === this.selectedSource &&
-          flight.segment[flight.segment.length - 1].destination ===
-            this.selectedDestination
-      );
+          flight.segment[flight.segment.length - 1].destination === this.selectedDestination
+      )
 
       if (this.sortByDuration) {
-        filtered = [...filtered].sort((a, b) => a.duration - b.duration);
+        filtered = [...filtered].sort((a, b) => a.duration - b.duration)
       }
 
-      return filtered;
+      return filtered
     },
   },
   methods: {
     async fetchFlights() {
-      const res = await fetch("/flights.json");
-      const data = await res.json();
-      this.flights = data;
+      const res = await fetch('/flights.json')
+      const data = await res.json()
+      this.flights = data
 
-      const allLocations = new Set();
+      const allLocations = new Set()
       data.forEach((flight) =>
         flight.segment.forEach((seg) => {
-          allLocations.add(seg.origin);
-          allLocations.add(seg.destination);
+          allLocations.add(seg.origin)
+          allLocations.add(seg.destination)
         })
-      );
-      this.locations = Array.from(allLocations);
+      )
+      this.locations = Array.from(allLocations)
     },
     validateSelection() {
       if (
@@ -165,20 +155,33 @@ export default {
         this.selectedDestination &&
         this.selectedSource === this.selectedDestination
       ) {
-        this.error = "Source and destination cannot be the same.";
+        this.error = 'Source and destination cannot be the same.'
+        setTimeout(() => {
+          this.selectedSource = ''
+          this.selectedDestination = ''
+          this.error = ''
+        }, 2000)
       } else {
-        this.error = "";
+        this.error = ''
       }
     },
     formatDate(dateStr) {
-      const options = { dateStyle: "medium", timeStyle: "short" };
-      return new Date(dateStr).toLocaleString(undefined, options);
+      const options = { dateStyle: 'medium', timeStyle: 'short' }
+      return new Date(dateStr).toLocaleString(undefined, options)
+    },
+    interchange() {
+      if (this.selectedSource && this.selectedDestination) {
+        const temp = this.selectedSource
+        this.selectedSource = this.selectedDestination
+        this.selectedDestination = temp
+        this.validateSelection()
+      }
     },
   },
   mounted() {
-    this.fetchFlights();
+    this.fetchFlights()
   },
-};
+}
 </script>
 
 <style scoped>
