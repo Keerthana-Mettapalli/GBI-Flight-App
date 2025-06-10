@@ -9,24 +9,36 @@
           <label class="block mb-2 text-sm font-semibold text-gray-800">From</label>
           <select
             v-model="selectedSource"
-            @change="validateSelection"
             class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 bg-white"
           >
             <option disabled value="">Select Source</option>
-            <option v-for="loc in locations" :key="`source-${loc}`" :value="loc">
+            <option
+              v-for="loc in locations"
+              :key="`source-${loc}`"
+              :value="loc"
+              :disabled="loc === selectedDestination"
+            >
               {{ loc }}
             </option>
           </select>
         </div>
 
-        <!-- Swap Button -->
         <div class="flex justify-center">
           <button
             @click="interchange"
-            class="w-10 h-10 flex items-center justify-center rounded-full bg-blue-400 text-white text-xl shadow-md hover:bg-blue-600 transition"
+            class="w-10 h-10 flex items-center justify-center rounded-full bg-white text-black border border-gray-300 shadow-md hover:bg-gray-100 transition"
             title="Swap Source & Destination"
           >
-            🔁
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 512 512"
+              fill="currentColor"
+              class="w-5 h-5"
+            >
+              <path
+                d="M503.7 345.4L392.6 456.5c-10 10-27.3 2.9-27.3-11.3v-70.1H80c-13.3 0-24-10.7-24-24v-16c0-13.3 10.7-24 24-24h285.3v-70.1c0-14.2 17.3-21.4 27.3-11.3l111.1 111.1c6.6 6.6 6.6 17.4 0 24zM8.3 166.6L119.4 55.5c10-10 27.3-2.9 27.3 11.3v70.1H432c13.3 0 24 10.7 24 24v16c0 13.3-10.7 24-24 24H146.7v70.1c0 14.2-17.3 21.4-27.3 11.3L8.3 190.6c-6.6-6.6-6.6-17.4 0-24z"
+              />
+            </svg>
           </button>
         </div>
 
@@ -35,7 +47,6 @@
           <label class="block mb-2 text-sm font-semibold text-gray-800">To</label>
           <select
             v-model="selectedDestination"
-            @change="validateSelection"
             class="w-full p-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 bg-white"
           >
             <option disabled value="">Select Destination</option>
@@ -51,19 +62,10 @@
         </div>
       </div>
 
-      <div v-if="error" class="text-red-600 text-center font-medium mt-2">
-        {{ error }}
-      </div>
-
       <div class="mt-4 text-end" v-if="filteredFlights.length > 0">
         <label class="inline-flex items-center space-x-2">
-          <input
-            type="checkbox"
-            v-model="sortByDuration"
-            class="accent-blue-600"
-            :disabled="!!error"
-          />
-          <span class="text-sm text-gray-700">Sort by shortest duration</span>
+          <input type="checkbox" v-model="sortByDuration" class="accent-blue-600" />
+          <span class="text-sm text-gray-700">Sort by duration (ascending)</span>
         </label>
       </div>
 
@@ -108,6 +110,7 @@
 </template>
 
 <script>
+import { DateTime } from 'luxon'
 export default {
   data() {
     return {
@@ -115,66 +118,46 @@ export default {
       locations: [],
       selectedSource: '',
       selectedDestination: '',
-      error: '',
       sortByDuration: false,
     }
   },
   computed: {
     filteredFlights() {
-      let filtered = this.flights.filter(
-        (flight) =>
-          flight.segment[0].origin === this.selectedSource &&
-          flight.segment[flight.segment.length - 1].destination === this.selectedDestination
+      let filtered = this.flights.filter((flight) =>
+        flight.segment.some(
+          (seg) =>
+            seg.origin === this.selectedSource && seg.destination === this.selectedDestination
+        )
       )
-
       if (this.sortByDuration) {
         filtered = [...filtered].sort((a, b) => a.duration - b.duration)
       }
-
+      console.log(filtered, 'filtered')
       return filtered
     },
   },
   methods: {
     async fetchFlights() {
-      const res = await fetch('/flights.json')
+      const res = await fetch('./flights.json')
       const data = await res.json()
       this.flights = data
-
       const allLocations = new Set()
-      data.forEach((flight) =>
+      data.forEach((flight) => {
         flight.segment.forEach((seg) => {
           allLocations.add(seg.origin)
           allLocations.add(seg.destination)
         })
-      )
+      })
       this.locations = Array.from(allLocations)
     },
-    validateSelection() {
-      if (
-        this.selectedSource &&
-        this.selectedDestination &&
-        this.selectedSource === this.selectedDestination
-      ) {
-        this.error = 'Source and destination cannot be the same.'
-        setTimeout(() => {
-          this.selectedSource = ''
-          this.selectedDestination = ''
-          this.error = ''
-        }, 2000)
-      } else {
-        this.error = ''
-      }
-    },
     formatDate(dateStr) {
-      const options = { dateStyle: 'medium', timeStyle: 'short' }
-      return new Date(dateStr).toLocaleString(undefined, options)
+      return DateTime.fromISO(dateStr).toFormat('dd LLL yyyy, hh:mm a')
     },
     interchange() {
       if (this.selectedSource && this.selectedDestination) {
         const temp = this.selectedSource
         this.selectedSource = this.selectedDestination
         this.selectedDestination = temp
-        this.validateSelection()
       }
     },
   },
